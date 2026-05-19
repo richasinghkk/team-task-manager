@@ -7,10 +7,15 @@ import { useAuth } from '../context/AuthContext';
 const ProjectTasks = () => {
   const [tasks, setTasks] = useState([]);
   const [project, setProject] = useState(null);
-  const [showForm, setShowForm] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showMemberForm, setShowMemberForm] = useState(false);
   const [newTask, setNewTask] = useState({
-    title: '', description: '', priority: 'medium', dueDate: ''
+    title: '', description: '', priority: 'medium',
+    dueDate: '', assignedTo: ''
   });
+  const [newMemberEmail, setNewMemberEmail] = useState('');
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -24,6 +29,7 @@ const ProjectTasks = () => {
     try {
       const { data } = await API.get(`/projects/${id}`);
       setProject(data);
+      setMembers(data.members || []);
     } catch (error) {
       toast.error('Failed to fetch project');
     }
@@ -43,11 +49,28 @@ const ProjectTasks = () => {
     try {
       await API.post('/tasks', { ...newTask, project: id });
       toast.success('Task created!');
-      setShowForm(false);
-      setNewTask({ title: '', description: '', priority: 'medium', dueDate: '' });
+      setShowTaskForm(false);
+      setNewTask({
+        title: '', description: '', priority: 'medium',
+        dueDate: '', assignedTo: ''
+      });
       fetchTasks();
     } catch (error) {
       toast.error('Failed to create task');
+    }
+  };
+
+  const handleAddMember = async (e) => {
+    e.preventDefault();
+    try {
+      const { data: userData } = await API.get(`/auth/user-by-email?email=${newMemberEmail}`);
+      await API.put(`/projects/${id}/addmember`, { userId: userData._id });
+      toast.success('Member added!');
+      setShowMemberForm(false);
+      setNewMemberEmail('');
+      fetchProject();
+    } catch (error) {
+      toast.error('User not found or already a member');
     }
   };
 
@@ -101,16 +124,57 @@ const ProjectTasks = () => {
       </nav>
 
       <div className="dashboard-content">
+
+        {/* Project Members */}
+        <div className="members-section">
+          <div className="dashboard-header">
+            <h3>👥 Team Members ({members.length})</h3>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => setShowMemberForm(!showMemberForm)}
+                className="btn-secondary">
+                + Add Member
+              </button>
+            )}
+          </div>
+          <div className="members-list">
+            {members.map((member) => (
+              <span key={member._id} className="member-badge">
+                👤 {member.name}
+              </span>
+            ))}
+          </div>
+
+          {showMemberForm && (
+            <div className="form-card" style={{marginTop: '16px'}}>
+              <h3>Add Member by Email</h3>
+              <form onSubmit={handleAddMember}>
+                <div className="form-group">
+                  <label>Member Email</label>
+                  <input
+                    type="email"
+                    placeholder="Enter member's email"
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <button type="submit" className="btn-primary">Add Member</button>
+              </form>
+            </div>
+          )}
+        </div>
+
         <div className="dashboard-header">
           <h2>Tasks</h2>
           {user?.role === 'admin' && (
-            <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+            <button onClick={() => setShowTaskForm(!showTaskForm)} className="btn-primary">
               + New Task
             </button>
           )}
         </div>
 
-        {showForm && (
+        {showTaskForm && (
           <div className="form-card">
             <h3>Create New Task</h3>
             <form onSubmit={handleCreateTask}>
@@ -131,6 +195,19 @@ const ProjectTasks = () => {
                   value={newTask.description}
                   onChange={(e) => setNewTask({...newTask, description: e.target.value})}
                 />
+              </div>
+              <div className="form-group">
+                <label>Assign To</label>
+                <select
+                  value={newTask.assignedTo}
+                  onChange={(e) => setNewTask({...newTask, assignedTo: e.target.value})}>
+                  <option value="">-- Select Member --</option>
+                  {members.map((member) => (
+                    <option key={member._id} value={member._id}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="form-group">
                 <label>Priority</label>
@@ -178,6 +255,11 @@ const ProjectTasks = () => {
                     {task.priority}
                   </span>
                 </div>
+                {task.assignedTo && (
+                  <p className="assigned">
+                    👤 Assigned to: {task.assignedTo.name}
+                  </p>
+                )}
                 {task.dueDate && (
                   <p className="due-date">
                     📅 Due: {new Date(task.dueDate).toLocaleDateString()}

@@ -6,6 +6,12 @@ import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
   const [projects, setProjects] = useState([]);
+  const [stats, setStats] = useState({
+    totalTasks: 0,
+    completedTasks: 0,
+    overdueTasks: 0,
+    totalProjects: 0
+  });
   const [showForm, setShowForm] = useState(false);
   const [newProject, setNewProject] = useState({ name: '', description: '' });
   const { user, logout } = useAuth();
@@ -19,8 +25,37 @@ const Dashboard = () => {
     try {
       const { data } = await API.get('/projects');
       setProjects(data);
+      fetchAllStats(data);
     } catch (error) {
       toast.error('Failed to fetch projects');
+    }
+  };
+
+  const fetchAllStats = async (projects) => {
+    try {
+      let totalTasks = 0;
+      let completedTasks = 0;
+      let overdueTasks = 0;
+
+      for (let project of projects) {
+        const { data } = await API.get(`/tasks/${project._id}`);
+        totalTasks += data.length;
+        completedTasks += data.filter(t => t.status === 'completed').length;
+        overdueTasks += data.filter(t =>
+          t.dueDate &&
+          new Date(t.dueDate) < new Date() &&
+          t.status !== 'completed'
+        ).length;
+      }
+
+      setStats({
+        totalProjects: projects.length,
+        totalTasks,
+        completedTasks,
+        overdueTasks
+      });
+    } catch (error) {
+      console.log('Stats error:', error);
     }
   };
 
@@ -63,6 +98,27 @@ const Dashboard = () => {
       </nav>
 
       <div className="dashboard-content">
+
+        {/* Stats Cards */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <h3>{stats.totalProjects}</h3>
+            <p>Total Projects</p>
+          </div>
+          <div className="stat-card">
+            <h3>{stats.totalTasks}</h3>
+            <p>Total Tasks</p>
+          </div>
+          <div className="stat-card green">
+            <h3>{stats.completedTasks}</h3>
+            <p>Completed</p>
+          </div>
+          <div className="stat-card red">
+            <h3>{stats.overdueTasks}</h3>
+            <p>Overdue</p>
+          </div>
+        </div>
+
         <div className="dashboard-header">
           <h2>My Projects</h2>
           {user?.role === 'admin' && (
