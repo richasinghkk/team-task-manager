@@ -25,12 +25,19 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 
+// Test route
+app.get('/', (req, res) => {
+  res.json({ message: 'Backend is running ✅' });
+});
+
+const PORT = process.env.PORT || 8080;
+
 // Database Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB Connected ✅');
-    app.listen(process.env.PORT || 5000, () => {
-      console.log(`Server running on port ${process.env.PORT} ✅`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT} ✅`);
     });
   })
   .catch((err) => {
