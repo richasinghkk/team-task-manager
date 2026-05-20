@@ -8,7 +8,6 @@ const ProjectTasks = () => {
   const [tasks, setTasks] = useState([]);
   const [project, setProject] = useState(null);
   const [members, setMembers] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [newTask, setNewTask] = useState({
@@ -27,20 +26,27 @@ const ProjectTasks = () => {
 
   const fetchProject = async () => {
     try {
-      const { data } = await API.get(`/projects/${id}`);
-      setProject(data);
-      setMembers(data.members || []);
+      const response = await API.get(`/projects/${id}`);
+      if (response && response.data) {
+        setProject(response.data);
+        setMembers(Array.isArray(response.data.members) ? response.data.members : []);
+      }
     } catch (error) {
-      toast.error('Failed to fetch project');
+      console.log('Project fetch error:', error);
     }
   };
 
   const fetchTasks = async () => {
     try {
-      const { data } = await API.get(`/tasks/${id}`);
-      setTasks(data);
+      const response = await API.get(`/tasks/${id}`);
+      if (response && response.data) {
+        setTasks(Array.isArray(response.data) ? response.data : []);
+      } else {
+        setTasks([]);
+      }
     } catch (error) {
-      toast.error('Failed to fetch tasks');
+      console.log('Tasks fetch error:', error);
+      setTasks([]);
     }
   };
 
@@ -125,7 +131,6 @@ const ProjectTasks = () => {
 
       <div className="dashboard-content">
 
-        {/* Project Members */}
         <div className="members-section">
           <div className="dashboard-header">
             <h3>👥 Team Members ({members.length})</h3>

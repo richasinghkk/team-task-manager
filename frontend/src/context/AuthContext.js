@@ -1,42 +1,34 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext } from 'react';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
+  const [user, setUser] = useState(() => {
     try {
       const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (error) {
-      localStorage.removeItem('user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
     }
-    setLoading(false);
-  }, []);
+  });
 
   const login = (userData) => {
-    localStorage.setItem('user', JSON.stringify(userData));
+    try {
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (e) {
+      console.log('localStorage error:', e);
+    }
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('user');
+    try {
+      localStorage.removeItem('user');
+    } catch (e) {
+      console.log('localStorage error:', e);
+    }
     setUser(null);
   };
-
-  if (loading) {
-    return <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      fontSize: '18px'
-    }}>Loading...</div>;
-  }
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
