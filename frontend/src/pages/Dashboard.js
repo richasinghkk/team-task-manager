@@ -23,23 +23,22 @@ const Dashboard = () => {
 
   const fetchProjects = async () => {
     try {
-      const { data } = await API.get('/projects');
-      const projectList = Array.isArray(data) ? data : [];
+      const response = await API.get('/projects');
+      let projectList = [];
+      if (response && response.data) {
+        projectList = Array.isArray(response.data) ? response.data : [];
+      }
       setProjects(projectList);
-      fetchAllStats(projectList);
+      await fetchAllStats(projectList);
     } catch (error) {
-      toast.error('Failed to fetch projects');
+      console.log('Project fetch error:', error);
       setProjects([]);
     }
   };
 
   const fetchAllStats = async (projectList) => {
     try {
-      let totalTasks = 0;
-      let completedTasks = 0;
-      let overdueTasks = 0;
-
-      if (!Array.isArray(projectList) || projectList.length === 0) {
+      if (!projectList || !Array.isArray(projectList) || projectList.length === 0) {
         setStats({
           totalProjects: 0,
           totalTasks: 0,
@@ -49,19 +48,28 @@ const Dashboard = () => {
         return;
       }
 
-      for (let project of projectList) {
+      let totalTasks = 0;
+      let completedTasks = 0;
+      let overdueTasks = 0;
+
+      for (let i = 0; i < projectList.length; i++) {
         try {
-          const { data } = await API.get(`/tasks/${project._id}`);
-          const taskList = Array.isArray(data) ? data : [];
+          const response = await API.get(`/tasks/${projectList[i]._id}`);
+          let taskList = [];
+          if (response && response.data) {
+            taskList = Array.isArray(response.data) ? response.data : [];
+          }
           totalTasks += taskList.length;
-          completedTasks += taskList.filter(t => t.status === 'completed').length;
-          overdueTasks += taskList.filter(t =>
-            t.dueDate &&
-            new Date(t.dueDate) < new Date() &&
-            t.status !== 'completed'
-          ).length;
+          for (let j = 0; j < taskList.length; j++) {
+            if (taskList[j].status === 'completed') completedTasks++;
+            if (
+              taskList[j].dueDate &&
+              new Date(taskList[j].dueDate) < new Date() &&
+              taskList[j].status !== 'completed'
+            ) overdueTasks++;
+          }
         } catch (err) {
-          console.log('Task fetch error for project:', project._id);
+          console.log('Task fetch error:', err);
         }
       }
 
@@ -115,8 +123,6 @@ const Dashboard = () => {
       </nav>
 
       <div className="dashboard-content">
-
-        {/* Stats Cards */}
         <div className="stats-grid">
           <div className="stat-card">
             <h3>{stats.totalProjects}</h3>
