@@ -24,32 +24,49 @@ const Dashboard = () => {
   const fetchProjects = async () => {
     try {
       const { data } = await API.get('/projects');
-      setProjects(data);
-      fetchAllStats(data);
+      const projectList = Array.isArray(data) ? data : [];
+      setProjects(projectList);
+      fetchAllStats(projectList);
     } catch (error) {
       toast.error('Failed to fetch projects');
+      setProjects([]);
     }
   };
 
-  const fetchAllStats = async (projects) => {
+  const fetchAllStats = async (projectList) => {
     try {
       let totalTasks = 0;
       let completedTasks = 0;
       let overdueTasks = 0;
 
-      for (let project of projects) {
-        const { data } = await API.get(`/tasks/${project._id}`);
-        totalTasks += data.length;
-        completedTasks += data.filter(t => t.status === 'completed').length;
-        overdueTasks += data.filter(t =>
-          t.dueDate &&
-          new Date(t.dueDate) < new Date() &&
-          t.status !== 'completed'
-        ).length;
+      if (!Array.isArray(projectList) || projectList.length === 0) {
+        setStats({
+          totalProjects: 0,
+          totalTasks: 0,
+          completedTasks: 0,
+          overdueTasks: 0
+        });
+        return;
+      }
+
+      for (let project of projectList) {
+        try {
+          const { data } = await API.get(`/tasks/${project._id}`);
+          const taskList = Array.isArray(data) ? data : [];
+          totalTasks += taskList.length;
+          completedTasks += taskList.filter(t => t.status === 'completed').length;
+          overdueTasks += taskList.filter(t =>
+            t.dueDate &&
+            new Date(t.dueDate) < new Date() &&
+            t.status !== 'completed'
+          ).length;
+        } catch (err) {
+          console.log('Task fetch error for project:', project._id);
+        }
       }
 
       setStats({
-        totalProjects: projects.length,
+        totalProjects: projectList.length,
         totalTasks,
         completedTasks,
         overdueTasks
