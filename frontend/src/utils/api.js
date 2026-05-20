@@ -1,13 +1,17 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'tender-surprise-production-305c.up.railway.app'
+  baseURL: 'https://tender-surprise-production-305c.up.railway.app/api'
 });
 
 API.interceptors.request.use((req) => {
   const user = localStorage.getItem('user');
   if (user) {
-    req.headers.Authorization = `Bearer ${JSON.parse(user).token}`;
+    try {
+      req.headers.Authorization = `Bearer ${JSON.parse(user).token}`;
+    } catch (e) {
+      localStorage.removeItem('user');
+    }
   }
   return req;
 });
