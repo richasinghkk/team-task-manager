@@ -1,44 +1,56 @@
 # 📋 Team Task Manager
 
-A full-stack web application for managing team projects and tasks with role-based access control.
+A full-stack web application for managing team projects and tasks with role-based access control (Admin/Member).
 
 ## 🌐 Live Demo
-👉 https://scintillating-youthfulness-production-c112.up.railway.app
+👉 https://task-manager-frontend.onrender.com
 
-## 🚀 Features
+## 🎥 Demo Video
+👉 [Click to Watch Demo Video](your-video-link-here)
+
+## 🚀 Key Features
 
 - 🔐 **Authentication** - Signup/Login with JWT tokens
-- 👥 **Team Management** - Create projects and add members
+- 👥 **Project & Team Management** - Create projects, add team members
 - 📋 **Task Management** - Create, assign, and track tasks
-- 📊 **Dashboard** - View stats, status, and overdue tasks
-- 🔒 **Role-Based Access** - Admin and Member roles
+- 📊 **Dashboard** - Real-time stats (total, completed, overdue tasks)
+- 🔒 **Role-Based Access Control** - Admin and Member roles
+- ⚠️ **Overdue Detection** - Automatic overdue task highlighting
 
 ## 🛠️ Tech Stack
 
-**Frontend:**
+### Frontend
 - React.js
 - React Router DOM
 - Axios
 - React Toastify
+- CSS3
 
-**Backend:**
+### Backend
 - Node.js
 - Express.js
-- MongoDB (Atlas)
+- MongoDB Atlas (NoSQL Database)
 - JWT Authentication
 - bcryptjs
 
-**Deployment:**
-- Railway (Frontend + Backend)
-- MongoDB Atlas (Database)
+### Deployment
+- Frontend → Render.com
+- Backend → Render.com
+- Database → MongoDB Atlas
 
-## ⚙️ Installation & Setup
+## ⚙️ Local Setup
 
 ### Prerequisites
 - Node.js installed
 - MongoDB Atlas account
 
-### Backend Setup
+### 1. Clone the repo
+```bash
+git clone https://github.com/richasinghkk/team-task-manager.git
+cd team-task-manager
+```
+
+### 2. Backend Setup
 ```bash
 cd backend
 npm install
@@ -54,7 +66,7 @@ Run backend:
 npm run dev
 ```
 
-### Frontend Setup
+### 3. Frontend Setup
 ```bash
 cd frontend
 npm install
@@ -66,49 +78,79 @@ team-task-manager/
 │
 ├── backend/
 │   ├── config/
+│   │   └── db.js
 │   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── projectController.js
+│   │   └── taskController.js
 │   ├── middleware/
+│   │   └── authMiddleware.js
 │   ├── models/
+│   │   ├── User.js
+│   │   ├── Project.js
+│   │   └── Task.js
 │   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── projectRoutes.js
+│   │   └── taskRoutes.js
 │   └── server.js
 │
 └── frontend/
-├── public/
 └── src/
-├── components/
 ├── context/
+│   └── AuthContext.js
 ├── pages/
+│   ├── Login.js
+│   ├── Register.js
+│   ├── Dashboard.js
+│   └── ProjectTasks.js
 └── utils/
+└── api.js
 
-## 👤 Role-Based Access
+## 👤 Role-Based Access Control
 
 | Feature | Admin | Member |
 |---------|-------|--------|
 | Create Project | ✅ | ❌ |
 | Delete Project | ✅ | ❌ |
+| Add Members | ✅ | ❌ |
 | Create Task | ✅ | ❌ |
+| Assign Task | ✅ | ❌ |
 | Delete Task | ✅ | ❌ |
 | Update Task Status | ✅ | ✅ |
 | View Projects | ✅ | ✅ |
 | View Tasks | ✅ | ✅ |
 
-## 📡 API Endpoints
+## 📡 REST API Endpoints
 
 ### Auth
-- `POST /api/auth/register` - Register user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/profile` - Get profile
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register user |
+| POST | `/api/auth/login` | Login user |
+| GET | `/api/auth/profile` | Get profile |
+| GET | `/api/auth/user-by-email` | Get user by email |
 
 ### Projects
-- `POST /api/projects` - Create project
-- `GET /api/projects` - Get all projects
-- `GET /api/projects/:id` - Get single project
-- `PUT /api/projects/:id/addmember` - Add member
-- `DELETE /api/projects/:id` - Delete project
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/projects` | Create project |
+| GET | `/api/projects` | Get all projects |
+| GET | `/api/projects/:id` | Get single project |
+| PUT | `/api/projects/:id/addmember` | Add member |
+| DELETE | `/api/projects/:id` | Delete project |
 
 ### Tasks
-- `POST /api/tasks` - Create task
-- `GET /api/tasks/:projectId` - Get project tasks
-- `PUT /api/tasks/:id` - Update task
-- `DELETE /api/tasks/:id` - Delete task
-- `GET /api/tasks/overdue` - Get overdue tasks
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/tasks` | Create task |
+| GET | `/api/tasks/:projectId` | Get project tasks |
+| PUT | `/api/tasks/:id` | Update task |
+| DELETE | `/api/tasks/:id` | Delete task |
+| GET | `/api/tasks/overdue` | Get overdue tasks |
+
+## 🔗 Links
+
+- **Live App:** https://task-manager-frontend.onrender.com
+- **GitHub Repo:** https://github.com/richasinghkk/team-task-manager
+- **Backend API:** https://team-task-manager-kmic.onrender.com
