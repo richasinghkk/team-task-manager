@@ -3,10 +3,10 @@
 A full-stack web application for managing team projects and tasks with role-based access control (Admin/Member).
 
 ## 🌐 Live Demo
-👉 https://task-manager-frontend.onrender.com
+👉 https://team-task-manager-frontend-rjfy.onrender.com
 
-## 🎥 Demo Video
-👉 [Click to Watch Demo Video](your-video-link-here)
+
+
 
 ## 🚀 Key Features
 
@@ -151,6 +151,6 @@ team-task-manager/
 
 ## 🔗 Links
 
-- **Live App:** https://task-manager-frontend.onrender.com
+- **Live App:** https://team-task-manager-frontend-rjfy.onrender.com
 - **GitHub Repo:** https://github.com/richasinghkk/team-task-manager
 - **Backend API:** https://team-task-manager-kmic.onrender.com
