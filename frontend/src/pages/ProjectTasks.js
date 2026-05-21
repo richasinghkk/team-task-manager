@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { FiPlus, FiTrash2, FiSearch, FiArrowLeft, FiUserPlus } from 'react-icons/fi';
 import API from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
+const columns = [
+  { id: 'todo', title: '📝 Todo', color: '#6366f1' },
+  { id: 'inprogress', title: '⚡ In Progress', color: '#f59e0b' },
+  { id: 'completed', title: '✅ Completed', color: '#10b981' }
+];
+
 const ProjectTasks = () => {
   const [tasks, setTasks] = useState([]);
+  const [filteredTasks, setFilteredTasks] = useState([]);
   const [project, setProject] = useState(null);
   const [members, setMembers] = useState([]);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showMemberForm, setShowMemberForm] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterPriority, setFilterPriority] = useState('all');
   const [newTask, setNewTask] = useState({
     title: '', description: '', priority: 'medium',
     dueDate: '', assignedTo: ''
@@ -23,6 +34,20 @@ const ProjectTasks = () => {
     fetchProject();
     fetchTasks();
   }, [id]);
+
+  useEffect(() => {
+    let filtered = [...tasks];
+    if (search) {
+      filtered = filtered.filter(t =>
+        t.title.toLowerCase().includes(search.toLowerCase()) ||
+        t.description?.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    if (filterPriority !== 'all') {
+      filtered = filtered.filter(t => t.priority === filterPriority);
+    }
+    setFilteredTasks(filtered);
+  }, [search, filterPriority, tasks]);
 
   const fetchProject = async () => {
     try {
@@ -40,13 +65,27 @@ const ProjectTasks = () => {
     try {
       const response = await API.get(`/tasks/${id}`);
       if (response && response.data) {
-        setTasks(Array.isArray(response.data) ? response.data : []);
-      } else {
-        setTasks([]);
+        const taskList = Array.isArray(response.data) ? response.data : [];
+        setTasks(taskList);
+        setFilteredTasks(taskList);
       }
     } catch (error) {
       console.log('Tasks fetch error:', error);
       setTasks([]);
+      setFilteredTasks([]);
+    }
+  };
+
+  const handleDragEnd = async (result) => {
+    if (!result.destination) return;
+    const { draggableId, destination } = result;
+    const newStatus = destination.droppableId;
+    try {
+      await API.put(`/tasks/${draggableId}`, { status: newStatus });
+      toast.success('Task moved!');
+      fetchTasks();
+    } catch (error) {
+      toast.error('Failed to move task');
     }
   };
 
@@ -56,10 +95,7 @@ const ProjectTasks = () => {
       await API.post('/tasks', { ...newTask, project: id });
       toast.success('Task created!');
       setShowTaskForm(false);
-      setNewTask({
-        title: '', description: '', priority: 'medium',
-        dueDate: '', assignedTo: ''
-      });
+      setNewTask({ title: '', description: '', priority: 'medium', dueDate: '', assignedTo: '' });
       fetchTasks();
     } catch (error) {
       toast.error('Failed to create task');
@@ -80,17 +116,8 @@ const ProjectTasks = () => {
     }
   };
 
-  const handleStatusChange = async (taskId, status) => {
-    try {
-      await API.put(`/tasks/${taskId}`, { status });
-      toast.success('Status updated!');
-      fetchTasks();
-    } catch (error) {
-      toast.error('Failed to update status');
-    }
-  };
-
   const handleDeleteTask = async (taskId) => {
+    if (!window.confirm('Delete this task?')) return;
     try {
       await API.delete(`/tasks/${taskId}`);
       toast.success('Task deleted!');
@@ -100,37 +127,39 @@ const ProjectTasks = () => {
     }
   };
 
-  const getStatusColor = (status) => {
-    if (status === 'completed') return 'status-completed';
-    if (status === 'inprogress') return 'status-inprogress';
-    return 'status-todo';
-  };
-
-  const getPriorityColor = (priority) => {
-    if (priority === 'high') return 'priority-high';
-    if (priority === 'medium') return 'priority-medium';
-    return 'priority-low';
-  };
-
   const isOverdue = (dueDate, status) => {
     if (!dueDate || status === 'completed') return false;
     return new Date(dueDate) < new Date();
   };
 
+  const getTasksByStatus = (status) => {
+    return filteredTasks.filter(t => t.status === status);
+  };
+
   return (
     <div className="dashboard">
       <nav className="navbar">
-        <h1>📋 {project?.name || 'Project Tasks'}</h1>
+        <div className="navbar-brand">
+          <span style={{fontSize: '24px'}}>📋</span>
+          <h1>{project?.name || 'Project Tasks'}</h1>
+        </div>
         <div className="nav-right">
-          <span>👤 {user?.name}</span>
+          <div className="nav-user">
+            <div className="nav-avatar">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <span>{user?.name}</span>
+            <span className="nav-role">{user?.role}</span>
+          </div>
           <button onClick={() => navigate('/dashboard')} className="btn-logout">
-            ← Back
+            <FiArrowLeft /> Back
           </button>
         </div>
       </nav>
 
       <div className="dashboard-content">
 
+        {/* Members Section */}
         <div className="members-section">
           <div className="dashboard-header">
             <h3>👥 Team Members ({members.length})</h3>
@@ -138,7 +167,7 @@ const ProjectTasks = () => {
               <button
                 onClick={() => setShowMemberForm(!showMemberForm)}
                 className="btn-secondary">
-                + Add Member
+                <FiUserPlus /> Add Member
               </button>
             )}
           </div>
@@ -149,7 +178,6 @@ const ProjectTasks = () => {
               </span>
             ))}
           </div>
-
           {showMemberForm && (
             <div className="form-card" style={{marginTop: '16px'}}>
               <h3>Add Member by Email</h3>
@@ -164,24 +192,51 @@ const ProjectTasks = () => {
                     required
                   />
                 </div>
-                <button type="submit" className="btn-primary">Add Member</button>
+                <button type="submit" className="btn-primary" style={{width:'auto'}}>
+                  <FiUserPlus /> Add Member
+                </button>
               </form>
             </div>
           )}
         </div>
 
+        {/* Tasks Header */}
         <div className="dashboard-header">
-          <h2>Tasks</h2>
+          <h2>Tasks Board</h2>
           {user?.role === 'admin' && (
-            <button onClick={() => setShowTaskForm(!showTaskForm)} className="btn-primary">
-              + New Task
+            <button onClick={() => setShowTaskForm(!showTaskForm)} className="btn-primary" style={{width:'auto'}}>
+              <FiPlus /> New Task
             </button>
           )}
         </div>
 
+        {/* Search and Filter */}
+        <div className="search-filter-bar">
+          <div className="search-wrapper">
+            <span className="search-icon"><FiSearch /></span>
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Search tasks..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <select
+            className="filter-select"
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}>
+            <option value="all">All Priorities</option>
+            <option value="high">🔴 High</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+        </div>
+
+        {/* Task Form */}
         {showTaskForm && (
           <div className="form-card">
-            <h3>Create New Task</h3>
+            <h3>✨ Create New Task</h3>
             <form onSubmit={handleCreateTask}>
               <div className="form-group">
                 <label>Task Title</label>
@@ -219,9 +274,9 @@ const ProjectTasks = () => {
                 <select
                   value={newTask.priority}
                   onChange={(e) => setNewTask({...newTask, priority: e.target.value})}>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
+                  <option value="low">🟢 Low</option>
+                  <option value="medium">🟡 Medium</option>
+                  <option value="high">🔴 High</option>
                 </select>
               </div>
               <div className="form-group">
@@ -232,64 +287,97 @@ const ProjectTasks = () => {
                   onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
                 />
               </div>
-              <button type="submit" className="btn-primary">Create Task</button>
+              <button type="submit" className="btn-primary" style={{width:'auto'}}>
+                <FiPlus /> Create Task
+              </button>
             </form>
           </div>
         )}
 
-        <div className="tasks-grid">
-          {tasks.length === 0 ? (
-            <p className="no-data">No tasks yet. Create one to get started!</p>
-          ) : (
-            tasks.map((task) => (
-              <div
-                key={task._id}
-                className={`task-card ${isOverdue(task.dueDate, task.status) ? 'overdue' : ''}`}>
-                <div className="task-header">
-                  <h3>{task.title}</h3>
-                  {isOverdue(task.dueDate, task.status) && (
-                    <span className="overdue-badge">⚠️ Overdue</span>
+        {/* Drag & Drop Task Board */}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="tasks-container">
+            {columns.map((column) => (
+              <div key={column.id} className="task-column">
+                <div className="task-column-header">
+                  <h3 style={{color: column.color}}>{column.title}</h3>
+                  <span className="task-count">
+                    {getTasksByStatus(column.id).length}
+                  </span>
+                </div>
+                <Droppable droppableId={column.id}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      style={{
+                        minHeight: '200px',
+                        background: snapshot.isDraggingOver ? '#f0f4ff' : 'transparent',
+                        borderRadius: '8px',
+                        padding: '4px',
+                        transition: 'background 0.2s'
+                      }}>
+                      {getTasksByStatus(column.id).length === 0 ? (
+                        <p style={{textAlign:'center', color:'#94a3b8', fontSize:'13px', padding:'20px'}}>
+                          Drop tasks here
+                        </p>
+                      ) : (
+                        getTasksByStatus(column.id).map((task, index) => (
+                          <Draggable key={task._id} draggableId={task._id} index={index}>
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                className={`task-card ${isOverdue(task.dueDate, task.status) ? 'overdue' : ''}`}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  boxShadow: snapshot.isDragging ? '0 10px 30px rgba(0,0,0,0.2)' : ''
+                                }}>
+                                <div className="task-header">
+                                  <h3>{task.title}</h3>
+                                  {isOverdue(task.dueDate, task.status) && (
+                                    <span className="overdue-badge">⚠️ Overdue</span>
+                                  )}
+                                </div>
+                                {task.description && (
+                                  <p className="task-description">{task.description}</p>
+                                )}
+                                <div className="task-meta">
+                                  <span className={`badge priority-${task.priority}`}>
+                                    {task.priority}
+                                  </span>
+                                </div>
+                                {task.assignedTo && (
+                                  <p className="assigned">
+                                    👤 {task.assignedTo.name}
+                                  </p>
+                                )}
+                                {task.dueDate && (
+                                  <p className="due-date">
+                                    📅 {new Date(task.dueDate).toLocaleDateString()}
+                                  </p>
+                                )}
+                                {user?.role === 'admin' && (
+                                  <button
+                                    onClick={() => handleDeleteTask(task._id)}
+                                    className="btn-danger">
+                                    <FiTrash2 /> Delete
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </Draggable>
+                        ))
+                      )}
+                      {provided.placeholder}
+                    </div>
                   )}
-                </div>
-                <p>{task.description}</p>
-                <div className="task-meta">
-                  <span className={`badge ${getStatusColor(task.status)}`}>
-                    {task.status}
-                  </span>
-                  <span className={`badge ${getPriorityColor(task.priority)}`}>
-                    {task.priority}
-                  </span>
-                </div>
-                {task.assignedTo && (
-                  <p className="assigned">
-                    👤 Assigned to: {task.assignedTo.name}
-                  </p>
-                )}
-                {task.dueDate && (
-                  <p className="due-date">
-                    📅 Due: {new Date(task.dueDate).toLocaleDateString()}
-                  </p>
-                )}
-                <div className="form-group">
-                  <select
-                    value={task.status}
-                    onChange={(e) => handleStatusChange(task._id, e.target.value)}>
-                    <option value="todo">Todo</option>
-                    <option value="inprogress">In Progress</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-                {user?.role === 'admin' && (
-                  <button
-                    onClick={() => handleDeleteTask(task._id)}
-                    className="btn-danger">
-                    Delete
-                  </button>
-                )}
+                </Droppable>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        </DragDropContext>
       </div>
     </div>
   );
